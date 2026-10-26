@@ -13,7 +13,8 @@
 // Exercise 4. Include the libraries necessaries to use the usb-serial-debug, and tinyusb
 // Tehtävä 4 . Lisää usb-serial-debugin ja tinyusbin käyttämiseen tarvittavat kirjastot.
 
-
+#include <tusb.h>
+#include "usbSerialDebug/helper.h"
 
 #define DEFAULT_STACK_SIZE 2048
 #define CDC_ITF_TX      1
@@ -93,7 +94,14 @@ static void print_task(void *arg){
         //             Do not forget to comment next line of code.
         tight_loop_contents();
         if(programState == DATA_READY){
-            printf("Sensor data: %lu\n", ambientLight);
+            //printf("Sensor data: %lu\n", ambientLight);
+            char buf[64] = {0};
+            snprintf(buf, 64 ,"Lux:%lu\n", ambientLight);
+            usb_serial_print(buf);
+            int tiimestamp = 123;
+            snprintf(buf, 64,"%d, %d\n", tiimestamp, ambientLight);
+            tud_cdc_n_write(CDC_ITF_TX,buf,strlen(buf));
+            tud_cdc_n_write_flush(CDC_ITF_TX);
             programState = WAITING;
         }
 
@@ -132,14 +140,14 @@ static void print_task(void *arg){
 // Exercise 4: Uncomment the following line to activate the TinyUSB library.  
 // Tehtävä 4:  Poista seuraavan rivin kommentointi aktivoidaksesi TinyUSB-kirjaston. 
 
-/*
+
 static void usbTask(void *arg) {
     (void)arg;
     while (1) {
         tud_task();              // With FreeRTOS wait for events
                                  // Do not add vTaskDelay. 
     }
-}*/
+}
 
 int main() {
 
@@ -154,7 +162,9 @@ int main() {
     //             Lisää CMakeLists.txt-tiedoston target_link_libraries-kohtaan usb_serial_debug.
     //             Poista CMakeLists.txt-tiedostosta käytöstä pico_enable_stdio_usb
 
-    stdio_init_all();
+
+
+    //stdio_init_all();
 
     // Uncomment this lines if you want to wait till the serial monitor is connected
     /*while (!stdio_usb_connected()){
@@ -182,12 +192,12 @@ int main() {
     // Tehtävä 4: Poista tämän xTaskCreate-rivin kommentointi luodaksesi tehtävän,
     // joka mahdollistaa kaksikanavaisen USB-viestinnän.
 
-    /*
+    
     xTaskCreate(usbTask, "usb", 2048, NULL, 3, &hUSB);
     #if (configNUMBER_OF_CORES > 1)
         vTaskCoreAffinitySet(hUSB, 1u << 0);
     #endif
-    */
+    
 
 
     // Create the tasks with xTaskCreate
@@ -202,6 +212,8 @@ int main() {
         printf("Sensor task creation failed\n");
         return 0;
     }
+
+    
     result = xTaskCreate(print_task,  // (en) Task function
                 "print",              // (en) Name of the task 
                 DEFAULT_STACK_SIZE,   // (en) Size of the stack for this task (in words). Generally 1024 or 2048
@@ -213,7 +225,8 @@ int main() {
         printf("Print Task creation failed\n");
         return 0;
     }
-
+    tusb_init();
+    usb_serial_init();
     // Start the scheduler (never returns)
     vTaskStartScheduler();
     
