@@ -10,74 +10,53 @@
 
 #include "tkjhat/sdk.h"
 
-// Exercise 4. Include the libraries necessaries to use the usb-serial-debug, and tinyusb
-// Tehtävä 4 . Lisää usb-serial-debugin ja tinyusbin käyttämiseen tarvittavat kirjastot.
-
 #include <tusb.h>
 #include "usbSerialDebug/helper.h"
+
+#include "imu.h"
 
 #define DEFAULT_STACK_SIZE 2048
 #define CDC_ITF_TX      1
 
+#define MAX_MORSE_LEN 64
+#define IMU_QUEUE_LEN 20
 
-// Tehtävä 3: Tilakoneen esittely Add missing states.
-// Exercise 3: Definition of the state machine. Add missing states.
-enum state { 
-    DATA_READY = 0,
-    WAITING=1
-};
+typedef enum { 
+    STATE_IDLE = 0,
+    STATE_RECORDING,
+    STATE_PROCESSING,
+    STATE_SENDING,
+    STATE_RECEIVING
+} system_state_t;
 
-enum state programState = WAITING;
+system_state_t programState = STATE_IDLE;
 
-// Tehtävä 3: Valoisuuden globaali muuttuja
-// Exercise 3: Global variable for ambient light
-uint32_t ambientLight;
+// Buffer for morse characters
+char morse_buf[MAX_MORSE_LEN];
+
+QueueHandle_t imu_queue;
 
 static void btn_fxn(uint gpio, uint32_t eventMask) {
-    // Tehtävä 1: Vaihda LEDin tila käyttämällä TKJHAT SDK:n sopivaa funktiota.
-    // Exercise 1: Toggle the LED using the appropriate function from the TKJHAT SDK.
-    toggle_red_led();
+    
 }
 
-static void sensor_task(void *arg){
+static void imu_task(void *arg){
     (void)arg;
-    init_veml6030();
-    // Tehtävä 2: Alusta valoisuusanturi. Etsi SDK-dokumentaatiosta sopiva funktio.
-    // Exercise 2: Init the light sensor. Find in the SDK documentation the adequate function.
-   
+    // init imu ?
+    imu_data_t raw_reading;
+
     for(;;){
-        
-        // Tehtävä 2: Muokkaa tästä eteenpäin sovelluskoodilla. Kommentoi seuraava rivi.
-        //             
-        // Exercise 2: Modify with application code here. Comment following line.
-        //             Read sensor data and print it out as string; 
-        //tight_loop_contents(); 
 
-        //tehtävä 2 totetuus
-        //uint32_t sensorData = veml6030_read_light();
-        //printf("Sensor data: %lu\n", sensorData);
-
-
-        // Tehtävä 3:  Muokkaa aiemmin Tehtävässä 2 tehtyä koodia ylempänä.
-        //             Jos olet oikeassa tilassa, tallenna anturin arvo tulostamisen sijaan
-        //             globaaliin muuttujaan.
-        //             Sen jälkeen muuta tilaa.
-        // Exercise 3: Modify previous code done for Exercise 2, in previous lines. 
-        //             If you are in adequate state, instead of printing save the sensor value 
-        //             into the global variable.
-        //             After that, modify state
-
-        if(programState == WAITING){
-            ambientLight = veml6030_read_light();
-            programState = DATA_READY;
+        if (programState != STATE_RECORDING) {
+            vTaskDelay(pdMS_TO_TICKS(10));
+            continue;
         }
 
-        // Exercise 2. Just for sanity check. Please, comment this out
-        // Tehtävä 2: Just for sanity check. Please, comment this out
-        //printf("sensorTask\n");
+        imu_read_raw(&raw_reading);
 
-        // Do not remove this
-        vTaskDelay(pdMS_TO_TICKS(1000));
+        xQueueSend(imu_queue, &raw_reading, 0);
+
+        vTaskDelay(pdMS_TO_TICKS(10));
     }
 }
 
@@ -85,85 +64,19 @@ static void print_task(void *arg){
     (void)arg;
     
     while(1){
-        
-        // Tehtävä 3: Kun tila on oikea, tulosta sensoridata merkkijonossa debug-ikkunaan
-        //            Muista tilamuutos
-        //            Älä unohda kommentoida seuraavaa koodiriviä.
-        // Exercise 3: Print out sensor data as string to debug window if the state is correct
-        //             Remember to modify state
-        //             Do not forget to comment next line of code.
         tight_loop_contents();
-        if(programState == DATA_READY){
-            //printf("Sensor data: %lu\n", ambientLight);
-            char buf[64] = {0};
-            snprintf(buf, 64 ,"Lux:%lu\n", ambientLight);
-            usb_serial_print(buf);
-            int tiimestamp = 123;
-            snprintf(buf, 64,"%d, %d\n", tiimestamp, ambientLight);
-            tud_cdc_n_write(CDC_ITF_TX,buf,strlen(buf));
-            tud_cdc_n_write_flush(CDC_ITF_TX);
-            programState = WAITING;
-        }
-
-
-        
-        // Exercise 4. Use usb_serial_print() instead of printf() for debug output
-        //             produced after the USB serial library has been initialized.
-        //             Do not replace error messages that can execute before usb_serial_init().
-        //             Use the TinyUSB library to send data through the other serial port (CDC 1).
-        //             You can use the functions at https://github.com/hathach/tinyusb/blob/master/src/class/cdc/cdc_device.h
-        //             You can find an example at hello_dual_cdc
-        //             The data written using this should be provided using csv
-        //             timestamp, illuminance
-        // Tehtävä 4. Käytä usb_serial_print()-funktiota printf()-funktion sijaan
-        //            debug-tulostukseen sen jälkeen, kun USB-sarjaliikennekirjasto on alustettu.
-        //            Älä korvaa virheilmoituksia, jotka voivat suorittua ennen usb_serial_init()-kutsua.
-        //            Käytä TinyUSB-kirjastoa datan lähettämiseen toisen sarjaportin (CDC 1) kautta.
-        //            Voit käyttää funktioita: https://github.com/hathach/tinyusb/blob/master/src/class/cdc/cdc_device.h
-        //            Esimerkki löytyy hello_dual_cdc-projektista.
-        //            Tällä menetelmällä kirjoitettu data tulee antaa CSV-muodossa:
-        //            timestamp, illuminance
-
-
-
-
-        // Exercise 3. Just for sanity check. Please, comment this out
-        // Tehtävä 3: Just for sanity check. Please, comment this out
-        //printf("printTask\n");
-        
-        // Do not remove this
         vTaskDelay(pdMS_TO_TICKS(100));
     }
 }
-
-
-// Exercise 4: Uncomment the following line to activate the TinyUSB library.  
-// Tehtävä 4:  Poista seuraavan rivin kommentointi aktivoidaksesi TinyUSB-kirjaston. 
-
 
 static void usbTask(void *arg) {
     (void)arg;
     while (1) {
         tud_task();              // With FreeRTOS wait for events
-                                 // Do not add vTaskDelay. 
     }
 }
 
 int main() {
-
-    // Exercise 4: Comment the statement stdio_init_all(); 
-    //             Instead, add AT THE END OF MAIN (before vTaskStartScheduler();) adequate statements to enable the TinyUSB library and the usb-serial-debug.
-    //             You can see hello_dual_cdc for help
-    //             In CMakeLists.txt add usb_serial_debug to target_link_libraries.
-    //             In CMakeLists.txt deactivate pico_enable_stdio_usb
-    // Tehtävä 4:  Kommentoi lause stdio_init_all();
-    //             Sen sijaan lisää MAIN LOPPUUN (ennen vTaskStartScheduler();) tarvittavat komennot aktivoidaksesi TinyUSB-kirjaston ja usb-serial-debugin.
-    //             Voit katsoa apua esimerkistä hello_dual_cdc.
-    //             Lisää CMakeLists.txt-tiedoston target_link_libraries-kohtaan usb_serial_debug.
-    //             Poista CMakeLists.txt-tiedostosta käytöstä pico_enable_stdio_usb
-
-
-
     //stdio_init_all();
 
     // Uncomment this lines if you want to wait till the serial monitor is connected
@@ -174,45 +87,32 @@ int main() {
     init_hat_sdk();
     sleep_ms(300); //Wait some time so initialization of USB and hat is done.
 
-    // Exercise 1: Initialize the button and the led and define an register the corresponding interrupton.
-    //             Interruption handler is defined up as btn_fxn
+    // Initialize the button and the led and define an register the corresponding interrupton.
     init_sw1();
     gpio_set_irq_enabled_with_callback(BUTTON1, GPIO_IRQ_EDGE_FALL, true, btn_fxn);
     init_red_led();
-    // Tehtävä 1:  Alusta painike ja LEd ja rekisteröi vastaava keskeytys.
-    //             Keskeytyskäsittelijä on määritelty yläpuolella nimellä btn_fxn
 
+    imu_queue = xQueueCreate(20, sizeof(imu_data_t));
 
+    TaskHandle_t hImuTask, hPrintTask, hUSB = NULL;
 
-    
-    
-    TaskHandle_t hSensorTask, hPrintTask, hUSB = NULL;
-
-    // Exercise 4: Uncomment this xTaskCreate to create the task that enables dual USB communication.
-    // Tehtävä 4: Poista tämän xTaskCreate-rivin kommentointi luodaksesi tehtävän,
-    // joka mahdollistaa kaksikanavaisen USB-viestinnän.
-
-    
     xTaskCreate(usbTask, "usb", 2048, NULL, 3, &hUSB);
     #if (configNUMBER_OF_CORES > 1)
         vTaskCoreAffinitySet(hUSB, 1u << 0);
     #endif
     
-
-
     // Create the tasks with xTaskCreate
-    BaseType_t result = xTaskCreate(sensor_task, // (en) Task function
-                "sensor",                        // (en) Name of the task 
+    BaseType_t result = xTaskCreate(imu_task, // (en) Task function
+                "imu",                        // (en) Name of the task 
                 DEFAULT_STACK_SIZE,              // (en) Size of the stack for this task (in words). Generally 1024 or 2048
                 NULL,                            // (en) Arguments of the task 
                 2,                               // (en) Priority of this task
-                &hSensorTask);                   // (en) A handle to control the execution of this task
+                &hImuTask);                   // (en) A handle to control the execution of this task
 
     if(result != pdPASS) {
-        printf("Sensor task creation failed\n");
+        printf("IMU task creation failed\n");
         return 0;
     }
-
     
     result = xTaskCreate(print_task,  // (en) Task function
                 "print",              // (en) Name of the task 
@@ -221,16 +121,17 @@ int main() {
                 2,                    // (en) Priority of this task
                 &hPrintTask);         // (en) A handle to control the execution of this task
 
-    if(result != pdPASS) {
+    if (result != pdPASS) {
         printf("Print Task creation failed\n");
         return 0;
     }
+
     tusb_init();
     usb_serial_init();
+
     // Start the scheduler (never returns)
     vTaskStartScheduler();
     
-    // Never reach this line.
     return 0;
 }
 
