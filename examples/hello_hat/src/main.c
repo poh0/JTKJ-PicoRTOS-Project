@@ -147,7 +147,6 @@ const unsigned int note_durations_ms[NUM_NOTE_LENGTHS] = {
     125   // LEN_SIXTEENTH
 };
 
-
 note sik_hymn[] = { //C and F sharps
     {NOTE_D5, LEN_EIGHTH},
     {NOTE_E5, LEN_EIGHTH},
@@ -238,7 +237,42 @@ note sik_hymn[] = { //C and F sharps
     {NOTE_A4, LEN_QUARTER},
     {NOTE_B4, LEN_QUARTER},//pie less sä
 
+    {NOTE_B4, LEN_EIGHTH},//sillä arvonimi
     {NOTE_B4, LEN_EIGHTH},
+    {NOTE_A4, LEN_EIGHTH},
+    {NOTE_A4, LEN_EIGHTH},
+    {NOTE_A4, LEN_EIGHTH},
+    {NOTE_CS5, LEN_EIGHTH},
+    {NOTE_D5, LEN_QUARTER},
+    {NOTE_D5, LEN_EIGHTH},
+    {NOTE_D5, LEN_EIGHTH},
+    {NOTE_D5, LEN_EIGHTH},
+    {NOTE_E5, LEN_EIGHTH},
+    {NOTE_FS5, LEN_EIGHTH},
+    {NOTE_G5, LEN_EIGHTH},
+    {NOTE_A5, LEN_HALF},//eii
+    {NOTE_E5, LEN_QUARTER},
+    {NOTE_A5, LEN_QUARTER},
+    {NOTE_B5, LEN_QUARTER},
+    {NOTE_B5, LEN_QUARTER},
+    {NOTE_A5, LEN_QUARTER},
+    {NOTE_G5, LEN_EIGHTH},
+    {NOTE_A5, LEN_EIGHTH},
+    {NOTE_FS5, LEN_HALF},
+    {NOTE_FS5, LEN_QUARTER},
+    {NOTE_G5, LEN_QUARTER},
+    {NOTE_A5, LEN_HALF}, //kal
+    {NOTE_AS5, LEN_HALF},//jaa
+    {NOTE_B5, LEN_QUARTER},//juo
+    {NOTE_FS5, LEN_QUARTER},
+    {NOTE_E5, LEN_QUARTER},
+    {NOTE_D5, LEN_QUARTER},
+    {NOTE_D5, LEN_QUARTER},
+    {NOTE_B4, LEN_HALF},
+    {NOTE_A4, LEN_QUARTER},
+    {NOTE_B4, LEN_QUARTER},
+
+    {NOTE_B4, LEN_EIGHTH},//sillä arvonimi (chorus again)
     {NOTE_B4, LEN_EIGHTH},
     {NOTE_A4, LEN_EIGHTH},
     {NOTE_A4, LEN_EIGHTH},
@@ -268,14 +302,21 @@ note sik_hymn[] = { //C and F sharps
     {NOTE_FS5, LEN_QUARTER},
     {NOTE_E5, LEN_QUARTER},
     {NOTE_D5, LEN_QUARTER},
-    {NOTE_FS5, LEN_QUARTER},
+    {NOTE_D5, LEN_QUARTER},
     {NOTE_B4, LEN_HALF},
     {NOTE_A4, LEN_QUARTER},
     {NOTE_B4, LEN_QUARTER},
+
+    {NOTE_B4, LEN_EIGHTH}, //cha cha cha
+    {NOTE_B4, LEN_EIGHTH},
+    {NOTE_B4, LEN_EIGHTH},
+
     {NOTE_REST, LEN_WHOLE},
+    
     {NOTE_END, LEN_DOTTED_EIGHTH}//end
 
 };
+
 
 //const int sik_hymn_length = sizeof(sik_hymn) / sizeof(sik_hymn[0]);
 
