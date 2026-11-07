@@ -109,11 +109,6 @@ const unsigned int buzzer_frequencies[NUM_BUZZER_NOTES] = {
     1976  // NOTE_B6
 };
 
-typedef struct{
-    buzzer_note tone;
-    note_length length;
-}note;
-
 //also generated with gemini
 // Enum mapping note durations to array indices
 typedef enum {
@@ -130,6 +125,13 @@ typedef enum {
     // Total number of lengths mapped
     NUM_NOTE_LENGTHS
 } note_length;
+
+typedef struct{
+    buzzer_note tone;
+    note_length length;
+}note;
+
+
 
 // Array of durations in milliseconds (calculated for 120 BPM)
 // Using 'unsigned int' (or uint16_t) as max value is 2000
@@ -190,7 +192,89 @@ note sik_hymn[] = { //C and F sharps
     {NOTE_A4, LEN_QUARTER},
     {NOTE_B4, LEN_HALF},
     {NOTE_REST, LEN_QUARTER},
-    {NOTE_END, LEN_DOTTED_EIGHTH}
+
+    {NOTE_D5, LEN_EIGHTH},
+    {NOTE_E5, LEN_EIGHTH},
+    {NOTE_FS5, LEN_EIGHTH},
+    {NOTE_FS5, LEN_EIGHTH},
+    {NOTE_FS5, LEN_EIGHTH},
+    {NOTE_FS5, LEN_EIGHTH},
+    {NOTE_D5, LEN_QUARTER},
+    {NOTE_FS5, LEN_EIGHTH},
+    {NOTE_FS5, LEN_EIGHTH},
+    {NOTE_E5, LEN_EIGHTH},
+    {NOTE_E5, LEN_EIGHTH},
+    {NOTE_D5, LEN_EIGHTH},
+    {NOTE_CS5, LEN_DOTTED_QUARTER},
+    {NOTE_CS5, LEN_EIGHTH},
+    {NOTE_CS5, LEN_EIGHTH},
+    {NOTE_D5, LEN_QUARTER},
+    {NOTE_D5, LEN_EIGHTH},
+    {NOTE_CS5, LEN_EIGHTH},
+    {NOTE_D5, LEN_QUARTER},
+    {NOTE_E5, LEN_QUARTER},
+    {NOTE_FS5, LEN_QUARTER},
+    {NOTE_REST, LEN_HALF},//3rd row
+
+    {NOTE_A4, LEN_EIGHTH},
+    {NOTE_A4, LEN_EIGHTH},
+    {NOTE_FS5, LEN_QUARTER},
+    {NOTE_FS5, LEN_EIGHTH},
+    {NOTE_FS5, LEN_EIGHTH},
+    {NOTE_FS5, LEN_EIGHTH},
+    {NOTE_FS5, LEN_EIGHTH},
+    {NOTE_FS5, LEN_EIGHTH},
+    {NOTE_E5, LEN_EIGHTH},
+    {NOTE_D5, LEN_QUARTER},
+    {NOTE_CS5, LEN_QUARTER},
+    {NOTE_B4, LEN_QUARTER},
+    {NOTE_B4, LEN_EIGHTH},
+    {NOTE_CS5, LEN_EIGHTH},
+    {NOTE_D5, LEN_EIGHTH},
+    {NOTE_D5, LEN_EIGHTH},
+    {NOTE_E5, LEN_EIGHTH},
+    {NOTE_D5, LEN_EIGHTH},
+    {NOTE_CS5, LEN_QUARTER},
+    {NOTE_A4, LEN_QUARTER},
+    {NOTE_B4, LEN_QUARTER},//pie less sä
+
+    {NOTE_B4, LEN_EIGHTH},
+    {NOTE_B4, LEN_EIGHTH},
+    {NOTE_A4, LEN_EIGHTH},
+    {NOTE_A4, LEN_EIGHTH},
+    {NOTE_A4, LEN_EIGHTH},
+    {NOTE_CS5, LEN_EIGHTH},
+    {NOTE_D5, LEN_QUARTER},
+    {NOTE_D5, LEN_EIGHTH},
+    {NOTE_D5, LEN_EIGHTH},
+    {NOTE_D5, LEN_EIGHTH},
+    {NOTE_E5, LEN_EIGHTH},
+    {NOTE_FS5, LEN_EIGHTH},
+    {NOTE_G5, LEN_EIGHTH},
+    {NOTE_A5, LEN_HALF},
+    {NOTE_E5, LEN_QUARTER},
+    {NOTE_A5, LEN_QUARTER},
+    {NOTE_B5, LEN_QUARTER},
+    {NOTE_B5, LEN_QUARTER},
+    {NOTE_A5, LEN_QUARTER},
+    {NOTE_G5, LEN_EIGHTH},
+    {NOTE_A5, LEN_EIGHTH},
+    {NOTE_FS5, LEN_HALF},
+    {NOTE_FS5, LEN_QUARTER},
+    {NOTE_G5, LEN_QUARTER},
+    {NOTE_A5, LEN_HALF}, //kal
+    {NOTE_AS5, LEN_HALF},//jaa
+    {NOTE_B5, LEN_QUARTER},//juo
+    {NOTE_FS5, LEN_QUARTER},
+    {NOTE_E5, LEN_QUARTER},
+    {NOTE_D5, LEN_QUARTER},
+    {NOTE_FS5, LEN_QUARTER},
+    {NOTE_B4, LEN_HALF},
+    {NOTE_A4, LEN_QUARTER},
+    {NOTE_B4, LEN_QUARTER},
+    {NOTE_REST, LEN_WHOLE},
+    {NOTE_END, LEN_DOTTED_EIGHTH}//end
+
 };
 
 //const int sik_hymn_length = sizeof(sik_hymn) / sizeof(sik_hymn[0]);
