@@ -2,18 +2,22 @@
 
 #include "imu.h"
 
+#include "FreeRTOS.h"
+#include "task.h"
+
 // tänne imun funktioiden toteutukset
 
 void init_imu(void) {
     if (init_ICM42670() != 0) {
         // error
     }
-
 }
 
 void start_imu(void) {
     // Käynnistetään anturi (Low-Noise -tila, oletus ODR ja asteikot)
     ICM42670_start_with_default_values();
+    //TODO vaihda ratkaisu, testaamisen ajaksi asetetaan korkeamman pyörimisnopeuden havaitseminen
+    ICM42670_startGyro(100, 2000);
     // Lyhyt asettumisaika, jotta gyro ja kiihtyvyysanturi ehtivät herätä
     sleep_ms(10); 
 }
@@ -36,7 +40,9 @@ void imu_read_raw(imu_data_t *data_out) {
         &data_out->gyro.z,
         &temp
     );
-
+    //write timestamp
+    uint32_t ms = xTaskGetTickCount() * portTICK_PERIOD_MS;
+    data_out->timestamp = ms;
     // handle result    
 
     return;
