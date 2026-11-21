@@ -114,7 +114,9 @@ add_executable(${MAIN_TARGET}
     src/main.c
     src/imu.c
     src/display.c
-    src/music.c
+    src/sound.c
+    src/gesture.c
+    src/morse.c
 )
 
 # Links. Add all libraries that application is using. It must at least use the pico_stdlib

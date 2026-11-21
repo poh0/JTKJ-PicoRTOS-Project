@@ -1,11 +1,7 @@
-//usage: 
-//init_buzzer();
-//play_song(song);
-
 #pragma once
-#ifndef MUSIC_H
-#define MUSIC_H
+
 #define NOTE_DELAY 10
+
 //by gemini AI, prompt: "create an c array of note frequencies for buzzer range, and also create an enum that maps the array of frequencies to notes (such as A5 or C#5) "
 // Enum mapping note names to array indices
 typedef enum {
@@ -77,12 +73,22 @@ typedef enum {
 typedef struct{
     buzzer_note tone;
     note_length length;
-}note;
+} note;
+
+typedef enum {
+    SOUND_DOT = 0,
+    SOUND_DASH,
+    SOUND_SONG_SIK_HYMN
+} sound_event_t;
+
+extern note sik_hymn[];
+extern note dot;
+extern note line;
+
+void buzzer_task(void *arg);
 
 extern const unsigned int note_durations_ms[NUM_NOTE_LENGTHS];
 extern const unsigned int buzzer_frequencies[NUM_BUZZER_NOTES];
 
 void play_note(note * n);
 void play_song(note * song);
-
-#endif

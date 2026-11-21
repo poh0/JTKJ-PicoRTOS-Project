@@ -1,4 +1,4 @@
-#include "music.h"
+#include "sound.h"
 
 #include <FreeRTOS.h>
 
@@ -56,6 +56,7 @@ const unsigned int buzzer_frequencies[NUM_BUZZER_NOTES] = {
     1865, // NOTE_AS6
     1976  // NOTE_B6
 };
+
 // Array of durations in milliseconds (calculated for 120 BPM)
 // Using 'unsigned int' (or uint16_t) as max value is 2000
 const unsigned int note_durations_ms[NUM_NOTE_LENGTHS] = {
@@ -71,25 +72,29 @@ const unsigned int note_durations_ms[NUM_NOTE_LENGTHS] = {
 };
 
 void play_note(note * n){
-    if(n->tone != NOTE_REST){
+    if(n->tone != NOTE_REST) {
         //lookup the corresponding values for note freq and lenght
         buzzer_play_tone(buzzer_frequencies[n->tone], note_durations_ms[n->length] - NOTE_DELAY); //NOTE_DELAY ms of silence after each note so we can differentiate long sequences of same note, doesnt mess with timing
         buzzer_turn_off();
         vTaskDelay(pdMS_TO_TICKS(NOTE_DELAY));//wait out the rest of the note
     }
-    else{
+    else {
         //if note is rest, wait out the whole note
         vTaskDelay(pdMS_TO_TICKS(note_durations_ms[n->length]));
     }
 }
 
 void play_song(note * song){
-    note * cur_note = song;
-    while(cur_note->tone != NOTE_END){
+    note *cur_note = song;
+    while(cur_note->tone != NOTE_END) {
         play_note(cur_note);
-        cur_note++; //traverse pointer
+        cur_note++;
     }
 }
+
+note dot  = {NOTE_C5, LEN_SIXTEENTH};
+
+note line = {NOTE_C5, LEN_QUARTER};
 
 //mapped by me :(
 note sik_hymn[] = { //C and F sharps
@@ -261,4 +266,3 @@ note sik_hymn[] = { //C and F sharps
     {NOTE_END, LEN_DOTTED_EIGHTH}//end
 
 };
-

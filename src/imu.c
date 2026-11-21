@@ -30,7 +30,9 @@ void stop_imu(void) {
 }
 
 void imu_read_raw(imu_data_t *data_out) {
+    
     float temp;
+    
     int result = ICM42670_read_sensor_data(
         &data_out->acc.x,
         &data_out->acc.y,
@@ -40,6 +42,7 @@ void imu_read_raw(imu_data_t *data_out) {
         &data_out->gyro.z,
         &temp
     );
+    
     //write timestamp
     uint32_t ms = xTaskGetTickCount() * portTICK_PERIOD_MS;
     data_out->timestamp = ms;
