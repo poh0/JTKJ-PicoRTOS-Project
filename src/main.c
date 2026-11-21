@@ -22,21 +22,16 @@
 #define DEFAULT_STACK_SIZE 2048
 #define CDC_ITF_TX      1
 
-#define MAX_MORSE_LEN 64
-#define IMU_QUEUE_LEN 20
-
 typedef enum { 
     STATE_IDLE = 0,
     STATE_RECORDING,
-    STATE_PROCESSING,
     STATE_SENDING,
-    STATE_RECEIVING
+    // STATE_RECEIVING, NO receiving state needed because of full duplex.
+    // We must be able to receive at all times (except sik hymn!)
 } system_state_t;
 
-system_state_t program_state = STATE_IDLE;
-
-// Buffer for morse characters
-char morse_buf[MAX_MORSE_LEN];
+// volatile because modified inside an interrupt
+volatile system_state_t program_state = STATE_IDLE;
 
 // Producer: Imu task
 // Consumer: Gesture processing task
@@ -54,8 +49,56 @@ QueueHandle_t sound_queue;
 // consumer: display task
 QueueHandle_t display_queue;
 
+typedef struct {
+    char symbol;
+    bool is_rx;
+} display_data_t;
+
 static void btn_fxn(uint gpio, uint32_t eventMask) {
-    
+    // TODO: 
+    // catch GPIO_IRQ_EDGE_RISE and set state to recording
+    // catch GPIO_IRQ_EDGE_FALL and set state to sending (only if the current state is recording, else do nothing)
+    // i assume we need to software debounce
+}
+
+// General state machine / processing task
+static void morse_task(void *arg) {
+    (void)arg;
+
+    dir_t gesture;
+
+    for(;;) {
+        
+        switch (program_state) {
+        case STATE_RECORDING:
+            // 20 ms xTicksToWait here so we are not stuck sleeping !!! very important
+            if (xQueueReceive(gesture_queue, &gesture, pdMS_TO_TICKS(20)) == pdTRUE) {
+                
+                // send corresponding sound to buzzer
+                sound_event_t snd = (gesture == RIGHT) ? SOUND_DOT : SOUND_DASH;
+                xQueueSend(sound_queue, &snd, 0);
+
+                // send corresponding symbol to display
+                char symbol = (gesture == RIGHT) ? '.' : '-';
+                display_data_t dp = { symbol, false };
+
+                xQueueSend(display_queue, &dp, 0);
+            }
+            break;
+
+        case STATE_SENDING:
+
+            // if something to send, send it
+            // then go state_idle
+
+            break;
+        
+        default:
+            vTaskDelay(pdMS_TO_TICKS(20));
+            break;
+        }
+    }
+
 }
 
 static void imu_task(void *arg){
@@ -63,12 +106,17 @@ static void imu_task(void *arg){
 
     imu_data_t raw_reading = {0};
 
-    for(;;){
+    for(;;) {
+
+        if (program_state != STATE_RECORDING) {
+            vTaskDelay(pdMS_TO_TICKS(10));
+            continue;
+        }
 
         imu_read_raw(&raw_reading);
         xQueueSend(imu_queue, &raw_reading, 0);
 
-        vTaskDelay(pdMS_TO_TICKS(10));
+        vTaskDelay(pdMS_TO_TICKS(1)); // TODO: try different values here
     }
 }
 
@@ -118,7 +166,7 @@ int main() {
     init_buzzer();
 
     init_sw1();
-    gpio_set_irq_enabled_with_callback(BUTTON1, GPIO_IRQ_EDGE_FALL, true, btn_fxn);
+    gpio_set_irq_enabled_with_callback(BUTTON1, GPIO_IRQ_EDGE_FALL | GPIO_IRQ_EDGE_RISE, true, btn_fxn);
     init_red_led();
 
     init_imu();
@@ -127,9 +175,9 @@ int main() {
     imu_queue     = xQueueCreate(20, sizeof(imu_data_t));
     gesture_queue = xQueueCreate(10, sizeof(dir_t));
     sound_queue   = xQueueCreate(5,  sizeof(sound_event_t));
-    display_queue = xQueueCreate(16, sizeof(char));
+    display_queue = xQueueCreate(16, sizeof(display_data_t));
 
-    TaskHandle_t hImuTask, hPrintTask, hUSB, hBuzzerTask, hGestureProcessTask = NULL;
+    TaskHandle_t hImuTask, hPrintTask, hUSB, hBuzzerTask, hGestureProcessTask, hMorseTask = NULL;
 
     xTaskCreate(usbTask, "usb", 2048, NULL, 3, &hUSB);
     #if (configNUMBER_OF_CORES > 1)
@@ -155,14 +203,14 @@ int main() {
     result = xTaskCreate(gesture_process_task, "gesture_processing", DEFAULT_STACK_SIZE, &gesture_cfg, 2, &hGestureProcessTask);
 
     if(result != pdPASS) {
-        printf("Buzzer Task created failed\n");
+        printf("Gesture processing Task creation failed\n");
         return 0;
     }
 
     result = xTaskCreate(buzzer_task, "buzzer", 1024, NULL, 2, &hBuzzerTask);
 
     if(result != pdPASS) {
-        printf("Buzzer Task created failed\n");
+        printf("Buzzer Task creation failed\n");
         return 0;
     }
     
@@ -170,6 +218,13 @@ int main() {
 
     if (result != pdPASS) {
         printf("Print Task creation failed\n");
+        return 0;
+    }
+
+    result = xTaskCreate(morse_task, "morse_task", DEFAULT_STACK_SIZE, NULL, 2, &hMorseTask);
+
+    if(result != pdPASS) {
+        printf("Morse Task creation failed\n");
         return 0;
     }
 
