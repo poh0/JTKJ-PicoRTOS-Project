@@ -92,7 +92,7 @@ void play_song(note * song){
     }
 }
 
-note dot  = {NOTE_C5, LEN_SIXTEENTH};
+note dot  = {NOTE_E5, LEN_SIXTEENTH};
 
 note line = {NOTE_C5, LEN_QUARTER};
 

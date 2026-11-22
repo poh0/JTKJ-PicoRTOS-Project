@@ -8,6 +8,12 @@ typedef enum {
     LEFT
 } dir_t;
 
+typedef enum { //gest_t = dir_t should be a correct assignment
+    GEST_RIGHT = 0,
+    GEST_LEFT,
+    GEST_PAUSE
+} gest_t;
+
 // Suggested by AI, when asked how do I pass both queues as parameter to the task
 typedef struct {
     QueueHandle_t imu_queue;

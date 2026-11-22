@@ -31,7 +31,7 @@ typedef enum {
 } system_state_t;
 
 // volatile because modified inside an interrupt
-volatile system_state_t program_state = STATE_IDLE;
+volatile system_state_t program_state = STATE_RECORDING;
 
 // Producer: Imu task
 // Consumer: Gesture processing task
@@ -65,37 +65,45 @@ static void btn_fxn(uint gpio, uint32_t eventMask) {
 static void morse_task(void *arg) {
     (void)arg;
 
-    dir_t gesture;
-
+    gest_t gesture;
+    sound_event_t snd;
+    char gest_char_arr[3] = ".- "; 
     for(;;) {
         
         switch (program_state) {
-        case STATE_RECORDING:
-            // 20 ms xTicksToWait here so we are not stuck sleeping !!! very important
-            if (xQueueReceive(gesture_queue, &gesture, pdMS_TO_TICKS(20)) == pdTRUE) {
-                
-                // send corresponding sound to buzzer
-                sound_event_t snd = (gesture == RIGHT) ? SOUND_DOT : SOUND_DASH;
-                xQueueSend(sound_queue, &snd, 0);
+            case STATE_RECORDING:
+                // 20 ms xTicksToWait here so we are not stuck sleeping !!! very important
+                if (xQueueReceive(gesture_queue, &gesture, pdMS_TO_TICKS(20)) == pdTRUE) {
+                    
+                    // send corresponding sound to buzzer
+                    if(gesture = GEST_RIGHT){
+                        snd = SOUND_DOT;
+                    }
+                    if(gesture = GEST_LEFT){
+                        snd = SOUND_DASH;
+                    }
 
-                // send corresponding symbol to display
-                char symbol = (gesture == RIGHT) ? '.' : '-';
-                display_data_t dp = { symbol, false };
+                    xQueueSend(sound_queue, &snd, 0);
 
-                xQueueSend(display_queue, &dp, 0);
-            }
-            break;
+                    // send corresponding symbol to display
+                    //char symbol = (gesture == RIGHT) ? '.' : '-';
+                    char symbol = gest_char_arr[gesture];
+                    display_data_t dp = { symbol, false };
 
-        case STATE_SENDING:
+                    xQueueSend(display_queue, &dp, 0);
+                }
+                break;
 
-            // if something to send, send it
-            // then go state_idle
+            case STATE_SENDING:
 
-            break;
-        
-        default:
-            vTaskDelay(pdMS_TO_TICKS(20));
-            break;
+                // if something to send, send it
+                // then go state_idle
+
+                break;
+            
+            default:
+                vTaskDelay(pdMS_TO_TICKS(20));
+                break;
         }
     }
 
@@ -173,7 +181,7 @@ int main() {
     start_imu();
 
     imu_queue     = xQueueCreate(20, sizeof(imu_data_t));
-    gesture_queue = xQueueCreate(10, sizeof(dir_t));
+    gesture_queue = xQueueCreate(10, sizeof(gest_t));
     sound_queue   = xQueueCreate(5,  sizeof(sound_event_t));
     display_queue = xQueueCreate(16, sizeof(display_data_t));
 
