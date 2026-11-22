@@ -27,27 +27,14 @@ typedef enum {
     STATE_IDLE = 0,
     STATE_RECORDING,
     STATE_SENDING,
-    // STATE_RECEIVING, NO receiving state needed because of full duplex.
-    // We must be able to receive at all times (except sik hymn!)
 } system_state_t;
 
 // volatile because modified inside an interrupt
 volatile system_state_t program_state = STATE_RECORDING;
 
-// Producer: Imu task
-// Consumer: Gesture processing task
 QueueHandle_t imu_queue;
-
-// Producer: Gesture processing task
-// Consumer: state task
 QueueHandle_t gesture_queue;
-
-// producer: State task
-// Consumer: Buzzer task
 QueueHandle_t sound_queue;
-
-// producer: State task
-// consumer: display task
 QueueHandle_t display_queue;
 
 static void btn_fxn(uint gpio, uint32_t eventMask) {
@@ -63,7 +50,7 @@ static void morse_task(void *arg) {
 
     gest_t gesture;
     sound_event_t snd;
-    char gest_char_arr[3] = ".- "; 
+    char gest_char_arr[3] = {'.', '-', ' '};
     for(;;) {
         
         switch (program_state) {
@@ -72,17 +59,17 @@ static void morse_task(void *arg) {
                 if (xQueueReceive(gesture_queue, &gesture, pdMS_TO_TICKS(20)) == pdTRUE) {
                     
                     // send corresponding sound to buzzer
-                    if(gesture = GEST_RIGHT){
+                    if (gesture == GEST_RIGHT) {
                         snd = SOUND_DOT;
                     }
-                    if(gesture = GEST_LEFT){
+
+                    if (gesture == GEST_LEFT) {
                         snd = SOUND_DASH;
                     }
 
                     xQueueSend(sound_queue, &snd, 0);
 
                     // send corresponding symbol to display
-                    //char symbol = (gesture == RIGHT) ? '.' : '-';
                     char symbol = gest_char_arr[gesture];
                     display_data_t dp = { symbol, false };
 
