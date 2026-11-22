@@ -18,6 +18,7 @@
 #include "imu.h"
 #include "sound.h"
 #include "gesture.h"
+#include "display.h"
 
 #define DEFAULT_STACK_SIZE 2048
 #define CDC_ITF_TX      1
@@ -48,11 +49,6 @@ QueueHandle_t sound_queue;
 // producer: State task
 // consumer: display task
 QueueHandle_t display_queue;
-
-typedef struct {
-    char symbol;
-    bool is_rx;
-} display_data_t;
 
 static void btn_fxn(uint gpio, uint32_t eventMask) {
     // TODO: 
@@ -180,12 +176,15 @@ int main() {
     init_imu();
     start_imu();
 
+    init_display();
+    clear_display();
+
     imu_queue     = xQueueCreate(20, sizeof(imu_data_t));
     gesture_queue = xQueueCreate(10, sizeof(gest_t));
     sound_queue   = xQueueCreate(5,  sizeof(sound_event_t));
     display_queue = xQueueCreate(16, sizeof(display_data_t));
 
-    TaskHandle_t hImuTask, hPrintTask, hUSB, hBuzzerTask, hGestureProcessTask, hMorseTask = NULL;
+    TaskHandle_t hImuTask, hPrintTask, hUSB, hBuzzerTask, hGestureProcessTask, hMorseTask, hDisplayTask = NULL;
 
     xTaskCreate(usbTask, "usb", 2048, NULL, 3, &hUSB);
     #if (configNUMBER_OF_CORES > 1)
@@ -212,6 +211,13 @@ int main() {
 
     if(result != pdPASS) {
         printf("Gesture processing Task creation failed\n");
+        return 0;
+    }
+
+    result = xTaskCreate(display_task, "display", DEFAULT_STACK_SIZE, &display_queue, 2, &hDisplayTask);
+
+    if(result != pdPASS) {
+        printf("Display Task creation failed\n");
         return 0;
     }
 
