@@ -18,7 +18,7 @@
 #include "imu.h"
 #include "sound.h"
 #include "gesture.h"
-#include "display.h"
+//#include "display.h"
 
 #define DEFAULT_STACK_SIZE 2048
 #define CDC_ITF_TX      1
@@ -42,6 +42,7 @@ static void btn_fxn(uint gpio, uint32_t eventMask) {
     // catch GPIO_IRQ_EDGE_RISE and set state to recording
     // catch GPIO_IRQ_EDGE_FALL and set state to sending (only if the current state is recording, else do nothing)
     // i assume we need to software debounce
+    // Note, we must use ISR special functions like xTaskGetTickCountFromISR()
 }
 
 // General state machine / processing task
@@ -50,7 +51,7 @@ static void morse_task(void *arg) {
 
     gest_t gesture;
     sound_event_t snd;
-    char gest_char_arr[3] = {'.', '-', ' '};
+    const char gest_char_arr[] = {'.', '-', ' '};
     for(;;) {
         
         switch (program_state) {
@@ -61,19 +62,21 @@ static void morse_task(void *arg) {
                     // send corresponding sound to buzzer
                     if (gesture == GEST_RIGHT) {
                         snd = SOUND_DOT;
+                        xQueueSend(sound_queue, &snd, 0);
                     }
 
-                    if (gesture == GEST_LEFT) {
+                    else if (gesture == GEST_LEFT) {
                         snd = SOUND_DASH;
+                        xQueueSend(sound_queue, &snd, 0);
                     }
 
-                    xQueueSend(sound_queue, &snd, 0);
-
+                    /*
                     // send corresponding symbol to display
                     char symbol = gest_char_arr[gesture];
                     display_data_t dp = { symbol, false };
 
                     xQueueSend(display_queue, &dp, 0);
+                    */
                 }
                 break;
 
@@ -163,15 +166,15 @@ int main() {
     init_imu();
     start_imu();
 
-    init_display();
-    clear_display();
+    //init_display();
+    //clear_display();
 
     imu_queue     = xQueueCreate(20, sizeof(imu_data_t));
     gesture_queue = xQueueCreate(10, sizeof(gest_t));
     sound_queue   = xQueueCreate(5,  sizeof(sound_event_t));
-    display_queue = xQueueCreate(16, sizeof(display_data_t));
+    //display_queue = xQueueCreate(16, sizeof(display_data_t));
 
-    TaskHandle_t hImuTask, hPrintTask, hUSB, hBuzzerTask, hGestureProcessTask, hMorseTask, hDisplayTask = NULL;
+    TaskHandle_t hImuTask, hPrintTask, hUSB, hBuzzerTask, hGestureProcessTask, hMorseTask, hDisplayTask;
 
     xTaskCreate(usbTask, "usb", 2048, NULL, 3, &hUSB);
     #if (configNUMBER_OF_CORES > 1)
@@ -201,7 +204,7 @@ int main() {
         return 0;
     }
 
-    result = xTaskCreate(display_task, "display", DEFAULT_STACK_SIZE, &display_queue, 2, &hDisplayTask);
+    //result = xTaskCreate(display_task, "display", DEFAULT_STACK_SIZE, &display_queue, 2, &hDisplayTask);
 
     if(result != pdPASS) {
         printf("Display Task creation failed\n");
@@ -231,6 +234,8 @@ int main() {
 
     tusb_init();
     usb_serial_init();
+
+    printf("here");
 
     vTaskStartScheduler();
     
