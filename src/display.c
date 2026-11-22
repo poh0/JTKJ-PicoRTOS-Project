@@ -23,11 +23,12 @@ void display_task(void *arg){
                 str[0] = d.symbol;
                 str[1] = '\0';
 
-                xSemaphoreTake(i2c_mutex, portMAX_DELAY);
-                write_text(str);
-                xSemaphoreGive(i2c_mutex);
+                if(xSemaphoreTake(i2c_mutex, portMAX_DELAY) == pdTRUE){
+                    write_text_xy(cx, cy, str);
+                    xSemaphoreGive(i2c_mutex);
+                }
 
-                cx += 10;
+                cx += 5;
             }
         }
     }

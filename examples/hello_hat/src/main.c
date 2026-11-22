@@ -390,9 +390,9 @@ int main() {
     // Wait until the USB serial monitor is connected before continuing.
     // This example intentionally pauses here until a serial connection is opened.
     // You can comment the while, if you want the program to run without waiting for a serial connection (you might lose some debug output if you do this).
-    //while (!stdio_usb_connected()){
-   //     sleep_ms(10);
-    //} 
+    while (!stdio_usb_connected()){
+        sleep_ms(10);
+    } 
     init_hat_sdk();
     sleep_ms(400); 
 

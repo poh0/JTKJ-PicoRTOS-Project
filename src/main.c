@@ -20,7 +20,7 @@
 #include "gesture.h"
 #include "display.h"
 
-#define DEFAULT_STACK_SIZE 2048
+#define DEFAULT_STACK_SIZE 1024
 #define CDC_ITF_TX      1
 
 typedef enum { 
@@ -78,7 +78,18 @@ static void morse_task(void *arg) {
                     display_data_t dp = { symbol, false };
 
                     xQueueSend(display_queue, &dp, 0);
+                    char buf[128];
+                    //int len = snprintf(buf, sizeof(buf), "Gyro: (%f, %f, %f)\nAccl: (%f, %f, %f)\nTime:%ld\n", gd.x, gd.y, gd.z, ad.x, ad.y, ad.z, t);
+
+                    int len = snprintf(buf, sizeof(buf), "%d", gesture);
                     
+                    if (len > 0) {
+                        // Ensure we don't try to write more than the buffer size if truncated
+                        uint32_t write_len = (len < sizeof(buf)) ? len : (sizeof(buf) - 1);
+                        
+                        tud_cdc_write(buf, write_len);
+                        tud_cdc_write_flush(); // Forces the USB packet to be sent immediately
+                    }
                 }
                 break;
 
@@ -108,16 +119,13 @@ static void imu_task(void *arg){
             vTaskDelay(pdMS_TO_TICKS(10));
             continue;
         }
+        if(xSemaphoreTake(i2c_mutex, portMAX_DELAY) == pdTRUE){
+            imu_read_raw(&raw_reading);
+            xSemaphoreGive(i2c_mutex);
+            xQueueSend(imu_queue, &raw_reading, 0);
+        }
 
-        xSemaphoreTake(i2c_mutex, portMAX_DELAY);
-
-        imu_read_raw(&raw_reading);
-
-        xSemaphoreGive(i2c_mutex);
-        
-        xQueueSend(imu_queue, &raw_reading, 0);
-
-        vTaskDelay(pdMS_TO_TICKS(1)); // TODO: try different values here
+        vTaskDelay(pdMS_TO_TICKS(10)); // TODO: try different values here
     }
 }
 
@@ -159,9 +167,8 @@ static void usbTask(void *arg) {
 }
 
 int main() {
-    //stdio_init_all();
     
-    i2c_mutex = xSemaphoreCreateMutex();
+    //stdio_init_all();
 
     init_hat_sdk();
     sleep_ms(300); //Wait some time so initialization of USB and hat is done.
@@ -177,6 +184,9 @@ int main() {
 
     init_display();
     clear_display();
+
+    i2c_mutex = xSemaphoreCreateMutex();
+    configASSERT(i2c_mutex != NULL);
 
     imu_queue     = xQueueCreate(20, sizeof(imu_data_t));
     gesture_queue = xQueueCreate(10, sizeof(gest_t));
