@@ -18,7 +18,7 @@
 #include "imu.h"
 #include "sound.h"
 #include "gesture.h"
-//#include "display.h"
+#include "display.h"
 
 #define DEFAULT_STACK_SIZE 2048
 #define CDC_ITF_TX      1
@@ -70,13 +70,13 @@ static void morse_task(void *arg) {
                         xQueueSend(sound_queue, &snd, 0);
                     }
 
-                    /*
+                    
                     // send corresponding symbol to display
                     char symbol = gest_char_arr[gesture];
                     display_data_t dp = { symbol, false };
 
                     xQueueSend(display_queue, &dp, 0);
-                    */
+                    
                 }
                 break;
 
@@ -166,13 +166,13 @@ int main() {
     init_imu();
     start_imu();
 
-    //init_display();
-    //clear_display();
+    init_display();
+    clear_display();
 
     imu_queue     = xQueueCreate(20, sizeof(imu_data_t));
     gesture_queue = xQueueCreate(10, sizeof(gest_t));
     sound_queue   = xQueueCreate(5,  sizeof(sound_event_t));
-    //display_queue = xQueueCreate(16, sizeof(display_data_t));
+    display_queue = xQueueCreate(16, sizeof(display_data_t));
 
     TaskHandle_t hImuTask, hPrintTask, hUSB, hBuzzerTask, hGestureProcessTask, hMorseTask, hDisplayTask;
 
@@ -204,7 +204,7 @@ int main() {
         return 0;
     }
 
-    //result = xTaskCreate(display_task, "display", DEFAULT_STACK_SIZE, &display_queue, 2, &hDisplayTask);
+    result = xTaskCreate(display_task, "display", DEFAULT_STACK_SIZE, &display_queue, 2, &hDisplayTask);
 
     if(result != pdPASS) {
         printf("Display Task creation failed\n");
