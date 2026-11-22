@@ -5,7 +5,6 @@
 #include "display.h"
 #include "tkjhat/sdk.h"
 
-
 void display_task(void *arg){
 
     QueueHandle_t *display_queue = (QueueHandle_t *)arg;
@@ -23,7 +22,11 @@ void display_task(void *arg){
                 char str[2];
                 str[0] = d.symbol;
                 str[1] = '\0';
-                //write_text(str);
+
+                xSemaphoreTake(i2c_mutex, portMAX_DELAY);
+                write_text(str);
+                xSemaphoreGive(i2c_mutex);
+
                 cx += 10;
             }
         }

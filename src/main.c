@@ -32,6 +32,8 @@ typedef enum {
 // volatile because modified inside an interrupt
 volatile system_state_t program_state = STATE_RECORDING;
 
+SemaphoreHandle_t i2c_mutex;
+
 QueueHandle_t imu_queue;
 QueueHandle_t gesture_queue;
 QueueHandle_t sound_queue;
@@ -107,7 +109,12 @@ static void imu_task(void *arg){
             continue;
         }
 
+        xSemaphoreTake(i2c_mutex, portMAX_DELAY);
+
         imu_read_raw(&raw_reading);
+
+        xSemaphoreGive(i2c_mutex);
+        
         xQueueSend(imu_queue, &raw_reading, 0);
 
         vTaskDelay(pdMS_TO_TICKS(1)); // TODO: try different values here
@@ -154,6 +161,8 @@ static void usbTask(void *arg) {
 int main() {
     //stdio_init_all();
     
+    i2c_mutex = xSemaphoreCreateMutex();
+
     init_hat_sdk();
     sleep_ms(300); //Wait some time so initialization of USB and hat is done.
 
