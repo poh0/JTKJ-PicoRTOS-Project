@@ -75,7 +75,7 @@ void gesture_process_task(void *arg){
                         break;
                     }
                     //handle pause gesture
-                    if(cur_time - last_gesture_logged < REGISTER_SPACE_DELAY){
+                    if(cur_time - last_gesture_logged > REGISTER_SPACE_DELAY){
                         //if first pause between string of morse, send a space
                         if(last_gest != GEST_PAUSE){
                             last_gest = GEST_PAUSE;

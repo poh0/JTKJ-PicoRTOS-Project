@@ -54,6 +54,9 @@ static void morse_task(void *arg) {
     gest_t gesture;
     sound_event_t snd;
     const char gest_char_arr[] = {'.', '-', ' '};
+    char buf[128] = "";
+    int index = 0;
+    char sik_morse[] = "... .. -.- ";
     for(;;) {
         
         switch (program_state) {
@@ -71,24 +74,19 @@ static void morse_task(void *arg) {
                         snd = SOUND_DASH;
                         xQueueSend(sound_queue, &snd, 0);
                     }
-
                     
                     // send corresponding symbol to display
                     char symbol = gest_char_arr[gesture];
                     display_data_t dp = { symbol, false };
 
                     xQueueSend(display_queue, &dp, 0);
-                    char buf[128];
-                    //int len = snprintf(buf, sizeof(buf), "Gyro: (%f, %f, %f)\nAccl: (%f, %f, %f)\nTime:%ld\n", gd.x, gd.y, gd.z, ad.x, ad.y, ad.z, t);
-
-                    int len = snprintf(buf, sizeof(buf), "%d", gesture);
-                    
-                    if (len > 0) {
-                        // Ensure we don't try to write more than the buffer size if truncated
-                        uint32_t write_len = (len < sizeof(buf)) ? len : (sizeof(buf) - 1);
-                        
-                        tud_cdc_write(buf, write_len);
-                        tud_cdc_write_flush(); // Forces the USB packet to be sent immediately
+    
+                    buf[index] = symbol;
+                    buf[index + 1] = '\0';
+                    index++;
+                    if(strcmp(buf, sik_morse) == 0){
+                        snd = SOUND_SONG_SIK_HYMN;
+                        xQueueSend(sound_queue, &snd, 0);
                     }
                 }
                 break;
@@ -122,8 +120,8 @@ static void imu_task(void *arg){
         if(xSemaphoreTake(i2c_mutex, portMAX_DELAY) == pdTRUE){
             imu_read_raw(&raw_reading);
             xSemaphoreGive(i2c_mutex);
-            xQueueSend(imu_queue, &raw_reading, 0);
         }
+        xQueueSend(imu_queue, &raw_reading, 0);
 
         vTaskDelay(pdMS_TO_TICKS(10)); // TODO: try different values here
     }
