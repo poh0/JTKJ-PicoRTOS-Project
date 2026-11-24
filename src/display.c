@@ -33,7 +33,20 @@ void display_task(void *arg){
     while (1) {
         if (xQueueReceive(*display_queue, &d, portMAX_DELAY) == pdTRUE) {
             
-            if (!d.is_rx) {
+            if (d.cmd == DISPLAY_CMD_RESET) {
+                ma_len = 0;
+                la_len = 0;
+                morse_array[0] = '\0';
+                letter_array[0] = '\0';
+
+                if (xSemaphoreTake(i2c_mutex, portMAX_DELAY) == pdTRUE) {
+                    clear_display();
+                    xSemaphoreGive(i2c_mutex);
+                }
+                continue; // go back to loop start
+            }
+
+            if (d.cmd == DISPLAY_CMD_SYMBOL_TX) {
                 if(d.symbol != ' '){
                     if(ma_len < MORSE_ARRAY_SIZE){
                         morse_array[ma_len] = d.symbol;
@@ -41,13 +54,12 @@ void display_task(void *arg){
                         ma_len++;
                     }
                 }
-                else{//if encounter a space:
+                else {//if encounter a space:
                     char letter = lookup_morse(morse_array);
                     if(la_len < LETTER_ARRAY_SIZE){
                         letter_array[la_len] = letter;
                         la_len++;
                     }
-
 
                     //reset morse array (we null terminate anyway after every character, so resetting the index is enough)
                     ma_len = 0;

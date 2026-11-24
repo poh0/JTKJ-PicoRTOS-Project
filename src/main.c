@@ -74,6 +74,7 @@ static void morse_task(void *arg) {
     char buf[MORSE_BUFFER_SIZE + 1] = ""; //to include null termination
     int index = 0;
     char sik_morse[] = "... .. -.- ";
+
     for(;;) {
         
         switch (program_state) {
@@ -94,14 +95,15 @@ static void morse_task(void *arg) {
                     
                     // send corresponding symbol to display
                     char symbol = gest_char_arr[gesture];
-                    display_data_t dp = { symbol, false };
-
+                    display_data_t dp = { DISPLAY_CMD_SYMBOL_TX, symbol };
                     xQueueSend(display_queue, &dp, 0);
+
                     if(index < MORSE_BUFFER_SIZE){
                         buf[index] = symbol;
                         buf[index + 1] = '\0';
                         index++;
                     }
+
                     //correct size first to avoid running strcmp
                     if(index == 11 && strcmp(buf, sik_morse) == 0){
                         snd = SOUND_SONG_SIK_HYMN;
@@ -112,12 +114,24 @@ static void morse_task(void *arg) {
 
             case STATE_SENDING:
 
-                // if something to send, send it
-                // then go state_idle
-                program_state = STATE_IDLE;
+                // if something to send, send it here
+                
+                // state_sending is only entered from previous state_recording,
+                // so we reset everything here, to be ready for next recording
+                
+                // reset gestures so that leftovers don't appear next time we start recording
+                // (which might be the case if state changed while a gesture was being processed)
+                xQueueReset(gesture_queue);
 
+                // reset display-related stuff
+                index = 0;
+                buf[0] = '\0';
+                display_data_t dp = { DISPLAY_CMD_RESET };
+                xQueueSend(display_queue, &dp, 0);
+
+                program_state = STATE_IDLE;
                 break;
-            
+
             default:
                 vTaskDelay(pdMS_TO_TICKS(20));
                 break;
@@ -137,6 +151,7 @@ static void imu_task(void *arg){
             vTaskDelay(pdMS_TO_TICKS(10));
             continue;
         }
+
         if(xSemaphoreTake(i2c_mutex, portMAX_DELAY) == pdTRUE){
             imu_read_raw(&raw_reading);
             xSemaphoreGive(i2c_mutex);
