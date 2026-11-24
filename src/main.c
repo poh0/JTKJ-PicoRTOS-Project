@@ -22,6 +22,7 @@
 
 #define DEFAULT_STACK_SIZE 1024
 #define CDC_ITF_TX      1
+#define MORSE_BUFFER_SIZE 128
 
 typedef enum { 
     STATE_IDLE = 0,
@@ -54,7 +55,7 @@ static void morse_task(void *arg) {
     gest_t gesture;
     sound_event_t snd;
     const char gest_char_arr[] = {'.', '-', ' '};
-    char buf[128] = "";
+    char buf[MORSE_BUFFER_SIZE + 1] = ""; //to include null termination
     int index = 0;
     char sik_morse[] = "... .. -.- ";
     for(;;) {
@@ -80,11 +81,13 @@ static void morse_task(void *arg) {
                     display_data_t dp = { symbol, false };
 
                     xQueueSend(display_queue, &dp, 0);
-    
-                    buf[index] = symbol;
-                    buf[index + 1] = '\0';
-                    index++;
-                    if(strcmp(buf, sik_morse) == 0){
+                    if(index < MORSE_BUFFER_SIZE){
+                        buf[index] = symbol;
+                        buf[index + 1] = '\0';
+                        index++;
+                    }
+                    //correct size first to avoid running strcmp
+                    if(index == 11 && strcmp(buf, sik_morse) == 0){
                         snd = SOUND_SONG_SIK_HYMN;
                         xQueueSend(sound_queue, &snd, 0);
                     }
