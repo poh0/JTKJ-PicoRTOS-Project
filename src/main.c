@@ -31,7 +31,7 @@ typedef enum {
 } system_state_t;
 
 // volatile because modified inside an interrupt
-volatile system_state_t program_state = STATE_RECORDING;
+volatile system_state_t program_state = STATE_IDLE;
 
 SemaphoreHandle_t i2c_mutex;
 
@@ -40,12 +40,28 @@ QueueHandle_t gesture_queue;
 QueueHandle_t sound_queue;
 QueueHandle_t display_queue;
 
+#define DEBOUNCE_MS 30 // sisu koita onko sopiva
+
 static void btn_fxn(uint gpio, uint32_t eventMask) {
-    // TODO: 
-    // catch GPIO_IRQ_EDGE_RISE and set state to recording
-    // catch GPIO_IRQ_EDGE_FALL and set state to sending (only if the current state is recording, else do nothing)
-    // i assume we need to software debounce
-    // Note, we must use ISR special functions like xTaskGetTickCountFromISR()
+    
+    static TickType_t last_interrupt_time = 0; // static so value stays same between calls
+    TickType_t now = xTaskGetTickCountFromISR();
+
+    if ((now - last_interrupt_time) < pdMS_TO_TICKS(DEBOUNCE_MS)) {
+        return;
+    }
+    
+    last_interrupt_time = now;
+
+    if (eventMask & GPIO_IRQ_EDGE_RISE) {
+        program_state = STATE_RECORDING;
+    }
+
+    else if (eventMask & GPIO_IRQ_EDGE_FALL) {
+        if (program_state == STATE_RECORDING) {
+            program_state = STATE_SENDING;
+        }
+    }
 }
 
 // General state machine / processing task
@@ -98,6 +114,7 @@ static void morse_task(void *arg) {
 
                 // if something to send, send it
                 // then go state_idle
+                program_state = STATE_IDLE;
 
                 break;
             
