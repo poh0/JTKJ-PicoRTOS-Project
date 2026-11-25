@@ -11,6 +11,8 @@
 #define GESTURE_TIMEOUT_THRESHOLD 500   //ms
 #define DELAY_BETWEEN_GESTURES 100      //ms
 #define REGISTER_SPACE_DELAY 1000       //ms
+#define MIN_GESTURE_LENGTH_MS 100       //ms
+#define MIN_RETURN_ANGLE_THRESHOLD 15000 //deg/s * ms
 
 typedef enum {
     STATE_MOVING_IDLE = 0, // no movement
@@ -126,7 +128,7 @@ void gesture_process_task(void *arg){
                     int_angle += (gy * (cur_time - last_measurement));
 
                     //handle if movement is stopped: gesture is completed
-                    if(gy < NO_MOVEMENT_THRESHOLD && int_angle <= 15000 && cur_time - gesture_timeout > 100){ //15000 because we multiplied by dMS which is 1000* dS
+                    if(gy < NO_MOVEMENT_THRESHOLD && int_angle <= MIN_RETURN_ANGLE_THRESHOLD && cur_time - gesture_timeout > MIN_GESTURE_LENGTH_MS){ //15000 because we multiplied by dMS which is 1000* dS
                         //also added a timeout of 100ms before we can advace to here
                         last_gest = dir;
                         last_gesture_logged = cur_time;
