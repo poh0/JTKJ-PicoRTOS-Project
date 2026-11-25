@@ -9,6 +9,7 @@
 #include <FreeRTOS.h>
 #include <queue.h>
 #include <task.h>
+#include <timers.h>
 
 #include "tkjhat/sdk.h"
 
@@ -40,28 +41,25 @@ QueueHandle_t gesture_queue;
 QueueHandle_t sound_queue;
 QueueHandle_t display_queue;
 
-#define DEBOUNCE_MS 30 // sisu koita onko sopiva
+#define DEBOUNCE_MS 30
 
-static void btn_fxn(uint gpio, uint32_t eventMask) {
-    
-    static TickType_t last_interrupt_time = 0; // static so value stays same between calls
-    TickType_t now = xTaskGetTickCountFromISR();
+static TimerHandle_t btn_debounce_timer;
 
-    if ((now - last_interrupt_time) < pdMS_TO_TICKS(DEBOUNCE_MS)) {
-        return;
-    }
-    
-    last_interrupt_time = now;
+// Runs 30ms after LAST bounce
+static void btn_timer_cb(TimerHandle_t xTimer) {
+    bool is_pressed = gpio_get(SW1_PIN);
 
-    if (eventMask & GPIO_IRQ_EDGE_RISE) {
+    if (is_pressed && program_state != STATE_RECORDING) {
         program_state = STATE_RECORDING;
+    } 
+    else if (!is_pressed && program_state == STATE_RECORDING) {
+        program_state = STATE_SENDING;
     }
+}
 
-    else if (eventMask & GPIO_IRQ_EDGE_FALL) {
-        if (program_state == STATE_RECORDING) {
-            program_state = STATE_SENDING;
-        }
-    }
+// just restart the debounce timer on any edge
+static void btn_fxn(uint gpio, uint32_t eventMask) {
+    xTimerResetFromISR(btn_debounce_timer, NULL);
 }
 
 // General state machine / processing task
@@ -210,6 +208,7 @@ int main() {
 
     init_sw1();
     gpio_set_irq_enabled_with_callback(BUTTON1, GPIO_IRQ_EDGE_FALL | GPIO_IRQ_EDGE_RISE, true, btn_fxn);
+
     init_red_led();
 
     init_imu();
@@ -283,6 +282,14 @@ int main() {
         printf("Morse Task creation failed\n");
         return 0;
     }
+
+    btn_debounce_timer = xTimerCreate(
+        "BtnDebounce",
+        pdMS_TO_TICKS(DEBOUNCE_MS),
+        pdFALSE, // no auto reload
+        NULL,
+        btn_timer_cb
+    );
 
     tusb_init();
     usb_serial_init();
