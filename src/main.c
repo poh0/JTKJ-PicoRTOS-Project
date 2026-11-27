@@ -24,7 +24,6 @@
 #define DEFAULT_STACK_SIZE 1024
 #define CDC_ITF_TX      1
 #define MORSE_BUFFER_SIZE 128
-
 #define DEBOUNCE_MS 30
 
 typedef enum { 
@@ -35,6 +34,8 @@ typedef enum {
 
 // volatile because modified inside an interrupt
 volatile system_state_t program_state = STATE_IDLE;
+
+static volatile bool btn_pressed = false;
 
 SemaphoreHandle_t i2c_mutex;
 
@@ -74,14 +75,8 @@ void tud_cdc_rx_cb(uint8_t itf) {
 
 // Runs 30ms after LAST bounce
 static void btn_timer_cb(TimerHandle_t xTimer) {
-    bool is_pressed = gpio_get(SW1_PIN);
-
-    if (is_pressed && program_state != STATE_RECORDING) {
-        program_state = STATE_RECORDING;
-    } 
-    else if (!is_pressed && program_state == STATE_RECORDING) {
-        program_state = STATE_SENDING;
-    }
+    (void)xTimer;
+    btn_pressed = gpio_get(SW1_PIN);
 }
 
 // just restart the debounce timer on any edge
@@ -104,8 +99,9 @@ static void morse_task(void *arg) {
         
         switch (program_state) {
             case STATE_RECORDING:
+                
                 // 20 ms xTicksToWait here so we are not stuck sleeping !!! very important
-                if (xQueueReceive(gesture_queue, &gesture, pdMS_TO_TICKS(20)) == pdTRUE) {
+                if (xQueueReceive(gesture_queue, &gesture, btn_pressed ? pdMS_TO_TICKS(20) : 0) == pdTRUE) {
                     
                     // send corresponding sound to buzzer
                     if (gesture == GEST_RIGHT) {
@@ -135,6 +131,10 @@ static void morse_task(void *arg) {
                         xQueueSend(sound_queue, &snd, 0);
                     }
                 }
+                else if (!btn_pressed) {
+                    program_state = STATE_SENDING;
+                }
+
                 break;
 
             case STATE_SENDING:
@@ -164,11 +164,16 @@ static void morse_task(void *arg) {
                 display_data_t dp = { DISPLAY_CMD_RESET };
                 xQueueSend(display_queue, &dp, 0);
 
-                program_state = STATE_IDLE;
+                program_state = btn_pressed ? STATE_RECORDING : STATE_IDLE;
                 break;
 
             default:
-                vTaskDelay(pdMS_TO_TICKS(20));
+                if (btn_pressed) {
+                    program_state = STATE_RECORDING;
+                }
+                else {
+                    vTaskDelay(pdMS_TO_TICKS(20));
+                }
                 break;
         }
     }
@@ -193,7 +198,7 @@ static void imu_task(void *arg){
         }
         xQueueSend(imu_queue, &raw_reading, 0);
 
-        vTaskDelay(pdMS_TO_TICKS(10)); // TODO: try different values here
+        vTaskDelay(pdMS_TO_TICKS(10));
     }
 }
 
@@ -228,8 +233,6 @@ static void usbTask(void *arg) {
 
 int main() {
     
-    //stdio_init_all();
-
     init_hat_sdk();
     sleep_ms(300); //Wait some time so initialization of USB and hat is done.
 
@@ -251,7 +254,7 @@ int main() {
 
     imu_queue     = xQueueCreate(20, sizeof(imu_data_t));
     gesture_queue = xQueueCreate(10, sizeof(gest_t));
-    sound_queue   = xQueueCreate(64,  sizeof(sound_event_t));
+    sound_queue   = xQueueCreate(64, sizeof(sound_event_t));
     display_queue = xQueueCreate(64, sizeof(display_data_t));
 
     TaskHandle_t hImuTask, hUSB, hBuzzerTask, hGestureProcessTask, hMorseTask, hDisplayTask;
@@ -268,38 +271,23 @@ int main() {
                 2,                            // (en) Priority of this task
                 &hImuTask);                   // (en) A handle to control the execution of this task
 
-    if(result != pdPASS) {
-        printf("IMU task creation failed\n");
-        return 0;
-    }
+    if(result != pdPASS) return 0;
     
     static gesture_task_config_t gesture_cfg;
     gesture_cfg.imu_queue     = imu_queue;
     gesture_cfg.gesture_queue = gesture_queue;
 
     result = xTaskCreate(gesture_process_task, "gesture_processing", DEFAULT_STACK_SIZE, &gesture_cfg, 2, &hGestureProcessTask);
-
-    if(result != pdPASS) {
-        return 0;
-    }
+    if (result != pdPASS) return 0;
 
     result = xTaskCreate(display_task, "display", DEFAULT_STACK_SIZE, &display_queue, 2, &hDisplayTask);
-
-    if(result != pdPASS) {
-        return 0;
-    }
+    if (result != pdPASS) return 0;
 
     result = xTaskCreate(buzzer_task, "buzzer", 1024, NULL, 2, &hBuzzerTask);
-
-    if(result != pdPASS) {
-        return 0;
-    }
+    if (result != pdPASS) return 0;
 
     result = xTaskCreate(morse_task, "morse_task", DEFAULT_STACK_SIZE, NULL, 2, &hMorseTask);
-
-    if(result != pdPASS) {
-        return 0;
-    }
+    if(result != pdPASS) return 0;
 
     btn_debounce_timer = xTimerCreate(
         "BtnDebounce",

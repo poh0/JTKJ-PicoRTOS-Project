@@ -85,8 +85,6 @@ extern note sik_hymn[];
 extern note dot;
 extern note line;
 
-void buzzer_task(void *arg);
-
 extern const unsigned int note_durations_ms[NUM_NOTE_LENGTHS];
 extern const unsigned int buzzer_frequencies[NUM_BUZZER_NOTES];
 
