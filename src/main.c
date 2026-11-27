@@ -45,6 +45,33 @@ QueueHandle_t display_queue;
 
 static TimerHandle_t btn_debounce_timer;
 
+void tud_cdc_rx_cb(uint8_t itf) {
+    char rx_buf[CFG_TUD_CDC_RX_BUFSIZE];
+    uint32_t count = tud_cdc_n_read(itf, rx_buf, sizeof(rx_buf));
+
+    // Only process Morse on CDC1 (still read CDC0 above so its buffer doesn't stall)
+    if (itf == CDC_ITF_TX && count > 0) {
+        for (uint32_t i = 0; i < count; i++) {
+            char c = rx_buf[i];
+
+            // send our received char to display
+            display_data_t dp = { DISPLAY_CMD_SYMBOL_RX, c };
+            xQueueSend(display_queue, &dp, 0);
+
+            // if we are recording, do not play any sounds.
+            if (program_state == STATE_RECORDING) continue;
+
+            if (c == '.') {
+                sound_event_t snd = SOUND_DOT;
+                xQueueSend(sound_queue, &snd, 0);
+            } else if (c == '-') {
+                sound_event_t snd = SOUND_DASH;
+                xQueueSend(sound_queue, &snd, 0);
+            }
+        }
+    }
+}
+
 // Runs 30ms after LAST bounce
 static void btn_timer_cb(TimerHandle_t xTimer) {
     bool is_pressed = gpio_get(SW1_PIN);
@@ -113,6 +140,11 @@ static void morse_task(void *arg) {
             case STATE_SENDING:
 
                 // if something to send, send it here
+                if (index > 0 && tud_cdc_n_connected(CDC_ITF_TX)) {
+                    tud_cdc_n_write(CDC_ITF_TX, buf, index);
+                    tud_cdc_n_write(CDC_ITF_TX, "\n", 1);
+                    tud_cdc_n_write_flush(CDC_ITF_TX);
+                }
                 
                 // state_sending is only entered from previous state_recording,
                 // so we reset everything here, to be ready for next recording
@@ -181,14 +213,6 @@ void buzzer_task(void *arg) {
     }
 }
 
-static void print_task(void *arg){
-    (void)arg;
-    
-    while(1){
-        tight_loop_contents();
-        vTaskDelay(pdMS_TO_TICKS(100));
-    }
-}
 
 static void usbTask(void *arg) {
     (void)arg;
@@ -225,7 +249,7 @@ int main() {
     sound_queue   = xQueueCreate(5,  sizeof(sound_event_t));
     display_queue = xQueueCreate(16, sizeof(display_data_t));
 
-    TaskHandle_t hImuTask, hPrintTask, hUSB, hBuzzerTask, hGestureProcessTask, hMorseTask, hDisplayTask;
+    TaskHandle_t hImuTask, hUSB, hBuzzerTask, hGestureProcessTask, hMorseTask, hDisplayTask;
 
     xTaskCreate(usbTask, "usb", 2048, NULL, 3, &hUSB);
     #if (configNUMBER_OF_CORES > 1)
@@ -251,35 +275,24 @@ int main() {
     result = xTaskCreate(gesture_process_task, "gesture_processing", DEFAULT_STACK_SIZE, &gesture_cfg, 2, &hGestureProcessTask);
 
     if(result != pdPASS) {
-        printf("Gesture processing Task creation failed\n");
         return 0;
     }
 
     result = xTaskCreate(display_task, "display", DEFAULT_STACK_SIZE, &display_queue, 2, &hDisplayTask);
 
     if(result != pdPASS) {
-        printf("Display Task creation failed\n");
         return 0;
     }
 
     result = xTaskCreate(buzzer_task, "buzzer", 1024, NULL, 2, &hBuzzerTask);
 
     if(result != pdPASS) {
-        printf("Buzzer Task creation failed\n");
-        return 0;
-    }
-    
-    result = xTaskCreate(print_task, "print", DEFAULT_STACK_SIZE, NULL, 2, &hPrintTask);
-
-    if (result != pdPASS) {
-        printf("Print Task creation failed\n");
         return 0;
     }
 
     result = xTaskCreate(morse_task, "morse_task", DEFAULT_STACK_SIZE, NULL, 2, &hMorseTask);
 
     if(result != pdPASS) {
-        printf("Morse Task creation failed\n");
         return 0;
     }
 
@@ -293,8 +306,6 @@ int main() {
 
     tusb_init();
     usb_serial_init();
-
-    printf("here");
 
     vTaskStartScheduler();
     

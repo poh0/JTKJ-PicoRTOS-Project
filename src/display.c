@@ -1,12 +1,10 @@
 #include <FreeRTOS.h>
 #include <queue.h>
 #include <string.h>
-#include <math.h>
 
 #include "morse.h"
 #include "display.h"
 #include "tkjhat/sdk.h"
-#include "sound.h"
 
 #define MORSE_ARRAY_SIZE 16
 #define LETTER_ARRAY_SIZE 100
