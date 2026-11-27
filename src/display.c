@@ -53,14 +53,17 @@ void display_task(void *arg){
                     }
                 }
                 else {//if encounter a space:
+                    if (ma_len == 0) continue;
+
                     char letter = lookup_morse(morse_array);
                     if(la_len < LETTER_ARRAY_SIZE){
                         letter_array[la_len] = letter;
                         la_len++;
                     }
 
-                    //reset morse array (we null terminate anyway after every character, so resetting the index is enough)
+                    //reset morse array
                     ma_len = 0;
+                    morse_array[0] = '\0';
                 }
             }
 
