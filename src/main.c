@@ -25,6 +25,8 @@
 #define CDC_ITF_TX      1
 #define MORSE_BUFFER_SIZE 128
 
+#define DEBOUNCE_MS 30
+
 typedef enum { 
     STATE_IDLE = 0,
     STATE_RECORDING,
@@ -40,8 +42,6 @@ QueueHandle_t imu_queue;
 QueueHandle_t gesture_queue;
 QueueHandle_t sound_queue;
 QueueHandle_t display_queue;
-
-#define DEBOUNCE_MS 30
 
 static TimerHandle_t btn_debounce_timer;
 
@@ -144,6 +144,11 @@ static void morse_task(void *arg) {
                     tud_cdc_n_write(CDC_ITF_TX, buf, index);
                     tud_cdc_n_write(CDC_ITF_TX, "\n", 1);
                     tud_cdc_n_write_flush(CDC_ITF_TX);
+
+                    // blink red led once to indicate sending (should bring +0.5pts)
+                    set_red_led_status(true);
+                    vTaskDelay(pdMS_TO_TICKS(150));
+                    set_red_led_status(false);
                 }
                 
                 // state_sending is only entered from previous state_recording,
@@ -246,8 +251,8 @@ int main() {
 
     imu_queue     = xQueueCreate(20, sizeof(imu_data_t));
     gesture_queue = xQueueCreate(10, sizeof(gest_t));
-    sound_queue   = xQueueCreate(5,  sizeof(sound_event_t));
-    display_queue = xQueueCreate(16, sizeof(display_data_t));
+    sound_queue   = xQueueCreate(64,  sizeof(sound_event_t));
+    display_queue = xQueueCreate(64, sizeof(display_data_t));
 
     TaskHandle_t hImuTask, hUSB, hBuzzerTask, hGestureProcessTask, hMorseTask, hDisplayTask;
 

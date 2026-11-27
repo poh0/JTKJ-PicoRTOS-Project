@@ -119,6 +119,11 @@ add_executable(${MAIN_TARGET}
     src/morse.c
 )
 
+target_include_directories(${MAIN_TARGET}
+    PRIVATE
+        ${PROJECT_SOURCE_DIR}/include
+)
+
 # Links. Add all libraries that application is using. It must at least use the pico_stdlib
 # In addition, for the course project you are using at least:
 #   * FreeRTOS-Kernel -> FreeRTOS functions: tasks queues, timers, lists ...
