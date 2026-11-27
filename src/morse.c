@@ -5,7 +5,7 @@ typedef struct {
     char letter;
 } MorseMap;
 
-// (AI-generated table)
+// (AI-generated table, prompt "create a morse table that maps string of morse to letters")
 // this goes into progmem
 static const MorseMap MORSE_TABLE[] = {
     // Letters (A-Z)
