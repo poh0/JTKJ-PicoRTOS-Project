@@ -46,13 +46,15 @@ QueueHandle_t display_queue;
 
 static TimerHandle_t btn_debounce_timer;
 
+
 void tud_cdc_rx_cb(uint8_t itf) {
     char rx_buf[CFG_TUD_CDC_RX_BUFSIZE];
-    uint32_t count = tud_cdc_n_read(itf, rx_buf, sizeof(rx_buf));
+    uint32_t rx_len = 0;
+    rx_len = tud_cdc_n_read(itf, rx_buf, sizeof(rx_buf));
 
     // Only process Morse on CDC1 (still read CDC0 above so its buffer doesn't stall)
-    if (itf == CDC_ITF_TX && count > 0) {
-        for (uint32_t i = 0; i < count; i++) {
+    if (itf == CDC_ITF_TX && rx_len > 0) {
+        for (uint32_t i = 0; i < rx_len; i++) {
             char c = rx_buf[i];
 
             // send our received char to display
@@ -265,8 +267,8 @@ int main() {
 
     imu_queue     = xQueueCreate(20, sizeof(imu_data_t));
     gesture_queue = xQueueCreate(10, sizeof(gest_t));
-    sound_queue   = xQueueCreate(64, sizeof(sound_event_t));
-    display_queue = xQueueCreate(64, sizeof(display_data_t));
+    sound_queue   = xQueueCreate(512, sizeof(sound_event_t));
+    display_queue = xQueueCreate(512, sizeof(display_data_t)); //has to be as large as the recieved message buffer if we want to display all recieved chars
 
     TaskHandle_t hImuTask, hUSB, hBuzzerTask, hGestureProcessTask, hMorseTask, hDisplayTask;
 

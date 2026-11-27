@@ -94,7 +94,7 @@ void play_song(note * song){
 
 note dot  = {NOTE_E5, LEN_SIXTEENTH};
 
-note line = {NOTE_C5, LEN_QUARTER};
+note line = {NOTE_C5, LEN_DOTTED_SIXTEENTH};
 
 //mapped by me :(
 note sik_hymn[] = { //C and F sharps
