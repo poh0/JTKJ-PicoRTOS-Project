@@ -1,8 +1,7 @@
 #include "gesture.h"
 
-#include <stdio.h>
 #include <stdlib.h>
-#include <tusb.h>
+
 #include "imu.h"
 
 
@@ -95,28 +94,29 @@ void gesture_process_task(void *arg){
                     }
                     break;
                 case STATE_MOVING_OUT:
-                    //integrate movement:
-                    //add to total: current angular velocity multiplied by delta time
-                    int_angle += (gy * (cur_time - last_measurement));
 
-                    //handle if movement is reversed:
-                    if(dir == RIGHT){
-                        if(gy < 0){
-                            gesture_state = STATE_MOVING_IN;
-                            //also we need to set the timeout
-                            gesture_timeout = cur_time;
-                        }
-                    }
-                    else{
-                        if(gy > 0){
-                            gesture_state = STATE_MOVING_IN;
-                            gesture_timeout = cur_time;
-                        }
-                    }
-
-                    //handle timeout: if movement not reversed before threshold, put into idle state
-                    if(cur_time - gesture_timeout >= GESTURE_TIMEOUT_THRESHOLD){
+                    if (cur_time - gesture_timeout >= GESTURE_TIMEOUT_THRESHOLD) {
                         gesture_state = STATE_MOVING_IDLE;
+                    }
+                    else {
+                        //integrate movement:
+                        //add to total: current angular velocity multiplied by delta time
+                        int_angle += (gy * (cur_time - last_measurement));
+
+                        //handle if movement is reversed:
+                        if (dir == RIGHT) {
+                            if (gy < 0) {
+                                gesture_state = STATE_MOVING_IN;
+                                //also we need to set the timeout
+                                gesture_timeout = cur_time;
+                            }
+                        }
+                        else {
+                            if (gy > 0) {
+                                gesture_state = STATE_MOVING_IN;
+                                gesture_timeout = cur_time;
+                            }
+                        }
                     }
 
                     //log last measurement timestamp
@@ -127,8 +127,12 @@ void gesture_process_task(void *arg){
                     //add to total current angular velocity multiplied by delta time
                     int_angle += (gy * (cur_time - last_measurement));
 
+                    //handle timeout: if movement not reversed before threshold, put into idle state
+                    if (cur_time - gesture_timeout >= GESTURE_TIMEOUT_THRESHOLD) {
+                        gesture_state = STATE_MOVING_IDLE;
+                    }
                     //handle if movement is stopped: gesture is completed
-                    if(gy < NO_MOVEMENT_THRESHOLD && int_angle <= MIN_RETURN_ANGLE_THRESHOLD && cur_time - gesture_timeout > MIN_GESTURE_LENGTH_MS){ //15000 because we multiplied by dMS which is 1000* dS
+                    else if (gy < NO_MOVEMENT_THRESHOLD && int_angle <= MIN_RETURN_ANGLE_THRESHOLD && cur_time - gesture_timeout > MIN_GESTURE_LENGTH_MS){ //15000 because we multiplied by dMS which is 1000* dS
                         //also added a timeout of 100ms before we can advace to here
                         last_gest = dir;
                         last_gesture_logged = cur_time;
@@ -136,11 +140,6 @@ void gesture_process_task(void *arg){
                         
                         //send the direction to gesture queue
                         xQueueSend(gesture_queue, &last_gest, 0);                
-                    }
-
-                    //handle timeout: if movement not reversed before threshold, put into idle state
-                    if(cur_time - gesture_timeout >= GESTURE_TIMEOUT_THRESHOLD){
-                        gesture_state = STATE_MOVING_IDLE;
                     }
 
                     //log last measurement timestamp

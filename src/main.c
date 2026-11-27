@@ -103,6 +103,9 @@ static void morse_task(void *arg) {
                 // 20 ms xTicksToWait here so we are not stuck sleeping !!! very important
                 if (xQueueReceive(gesture_queue, &gesture, btn_pressed ? pdMS_TO_TICKS(20) : 0) == pdTRUE) {
                     
+                    // quick fix for leftover pause from last session
+                    if (gesture == GEST_PAUSE && index == 0) break;
+
                     // send corresponding sound to buzzer
                     if (gesture == GEST_RIGHT) {
                         snd = SOUND_DOT;
@@ -164,11 +167,13 @@ static void morse_task(void *arg) {
                 display_data_t dp = { DISPLAY_CMD_RESET };
                 xQueueSend(display_queue, &dp, 0);
 
-                program_state = btn_pressed ? STATE_RECORDING : STATE_IDLE;
+                program_state = STATE_IDLE;
                 break;
 
             default:
                 if (btn_pressed) {
+                    xQueueReset(imu_queue);
+                    xQueueReset(gesture_queue);
                     program_state = STATE_RECORDING;
                 }
                 else {
@@ -193,10 +198,16 @@ static void imu_task(void *arg){
         }
 
         if(xSemaphoreTake(i2c_mutex, portMAX_DELAY) == pdTRUE){
+            // OLED might hold for long time
+            // So we need to check state again before using
+            if (program_state != STATE_RECORDING) {
+                xSemaphoreGive(i2c_mutex);
+                continue;
+            }
             imu_read_raw(&raw_reading);
             xSemaphoreGive(i2c_mutex);
+            xQueueSend(imu_queue, &raw_reading, 0);
         }
-        xQueueSend(imu_queue, &raw_reading, 0);
 
         vTaskDelay(pdMS_TO_TICKS(10));
     }
