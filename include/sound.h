@@ -75,9 +75,9 @@ typedef enum {
     SOUND_SONG_SIK_HYMN
 } sound_event_t;
 
-extern note_t sik_hymn[];
-extern note_t dot;
-extern note_t line;
+extern const note_t sik_hymn[];
+extern const note_t dot;
+extern const note_t line;
 
 void play_note(note_t * n);
 void play_song(note_t * song);

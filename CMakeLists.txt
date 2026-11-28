@@ -86,6 +86,7 @@ add_subdirectory(libs/usb-serial-debug)
 # Uncomment the examples that you want to include in your project.
 #
 # add_subdirectory(examples/hello_blink)
+add_subdirectory(examples/hat_nb_buzzer_ex)
 # add_subdirectory(examples/hello_blink_freertos)
 # add_subdirectory(examples/hello_pico)
 # add_subdirectory(examples/hello_freertos)
@@ -114,7 +115,7 @@ add_executable(${MAIN_TARGET}
     src/main.c
     src/imu.c
     src/display.c
-    src/sound.c
+    #src/sound.c
     src/gesture.c
     src/morse.c
     src/ringbuffer.c

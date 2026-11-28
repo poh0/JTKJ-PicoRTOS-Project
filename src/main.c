@@ -12,12 +12,14 @@
 #include <timers.h>
 
 #include "tkjhat/sdk.h"
+#include "tkjhat/buzzer.h"
 
 #include <tusb.h>
 #include "usbSerialDebug/helper.h"
 
+#include "melodies.h"
 #include "imu.h"
-#include "sound.h"
+//#include "sound.h"
 #include "gesture.h"
 #include "display.h"
 
@@ -25,6 +27,12 @@
 #define CDC_ITF_TX      1
 #define MORSE_BUFFER_SIZE 128
 #define DEBOUNCE_MS 30
+
+typedef enum {
+    SOUND_DOT = 0,
+    SOUND_DASH,
+    SOUND_SONG_SIK_HYMN
+} sound_event_t;
 
 typedef enum { 
     STATE_IDLE = 0,
@@ -218,20 +226,27 @@ static void imu_task(void *arg){
 void buzzer_task(void *arg) {
 
     sound_event_t event;
+    buzzer_init(BUZZER_PIN);
+    buzzer_set_volume(1);
 
     while (1) {
         if (xQueueReceive(sound_queue, &event, portMAX_DELAY) == pdTRUE) {
             switch (event) {
                 case SOUND_DOT:
-                    play_note(&dot);
+                    //play_note(&dot);
+                    buzzer_tone_async(dot.freq_hz, dot.duration_ms);
                     break;
                 case SOUND_DASH:
-                    play_note(&line);
+                    //play_note(&line);
+                    buzzer_tone_async(line.freq_hz, line.duration_ms);
                     break;
                 case SOUND_SONG_SIK_HYMN:
-                    play_song(sik_hymn);
+                    //play_song(sik_hymn);
+                    buzzer_play_melody_async(sik_hymn, sik_hymn_length);
                     break;
             }
+            //because using non-blocking implementation, wait until done with last item to consume next
+            buzzer_wait_done();
         }
     }
 }
@@ -249,7 +264,7 @@ int main() {
     init_hat_sdk();
     sleep_ms(300); //Wait some time so initialization of USB and hat is done.
 
-    init_buzzer();
+    //init_buzzer();
 
     init_sw1();
     gpio_set_irq_enabled_with_callback(BUTTON1, GPIO_IRQ_EDGE_FALL | GPIO_IRQ_EDGE_RISE, true, btn_fxn);

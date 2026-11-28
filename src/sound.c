@@ -31,7 +31,7 @@ note_t dot  = {NOTE_E5, LEN_SIXTEENTH};
 note_t line = {NOTE_C5, LEN_DOTTED_SIXTEENTH};
 
 //mapped by me :(
-note_t sik_hymn[] = { //C and F sharps
+const note_t sik_hymn[] = { //C and F sharps
     {NOTE_D5, LEN_EIGHTH},
     {NOTE_E5, LEN_EIGHTH},
     {NOTE_FS5, LEN_QUARTER},

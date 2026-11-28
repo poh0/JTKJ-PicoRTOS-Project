@@ -14,6 +14,7 @@ add_library(${APP_NAME} STATIC
   src/sdk.c
   src/ssd1306.c
   src/pdm/pdm_microphone.c
+  src/buzzer.c
   ${OPENPDM_SRCS}
 )
 
@@ -44,7 +45,7 @@ target_link_libraries(${APP_NAME} PUBLIC
   hardware_pwm
   hardware_gpio
    # hardware_spi       # uncomment if any source uses SPI
-  # hardware_timer     # uncomment if you use timer APIs
+  hardware_timer     # uncomment if you use timer APIs
 )
 
 # (Optional) tighten C standard
